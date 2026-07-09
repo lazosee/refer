@@ -1037,7 +1037,7 @@ export function DashboardPage({
                             type="button"
                             className="btn-copy-small"
                             title="Copy Short Link"
-                            onClick={`() => copyToClipboard(this, '${shortUrl}')`}
+                            onclick={`copyToClipboard(this, '${shortUrl}')`}
                           >
                             <svg
                               className="icon"
@@ -1114,11 +1114,12 @@ export function DashboardPage({
                             />
                           </svg>
                         </a>
+                        {/* @ts-ignore */}
                         <button
                           type="button"
                           className="btn btn-danger btn-icon"
                           title="Delete Link"
-                          onClick={`deleteLink('${link.code}')`}
+                          onclick={`deleteLink('${link.code}')`}
                         >
                           <svg
                             className="icon"
