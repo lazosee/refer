@@ -5,12 +5,9 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "refer",
-  "main": "src/index.ts",
+  "main": "src/index.tsx",
   "compatibility_date": "2026-07-09",
-  "assets": {
-    "binding": "ASSETS",
-    "directory": "./public",
-  },
+
   "observability": {
     "enabled": true,
   },
