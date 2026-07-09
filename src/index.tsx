@@ -8,6 +8,7 @@ import {
   EditPage,
   Layout,
 } from "./components/Pages";
+import { cors } from "hono/cors";
 
 type Bindings = CloudflareBindings & {
   ADMIN_USERNAME?: string;
@@ -15,6 +16,8 @@ type Bindings = CloudflareBindings & {
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
+
+app.use("*", cors({}));
 
 // Prevent favicon from triggering redirection logic
 app.get("/favicon.ico", (c) => c.text("", 404));
