@@ -2,7 +2,12 @@ import { Hono } from "hono";
 import { basicAuth } from "hono/basic-auth";
 import { getShortCode } from "./lib/hash";
 import { LinkMetadata, ShortLink } from "./types";
-import { DashboardPage, CreatePage, EditPage, Layout } from "./components/Pages";
+import {
+  DashboardPage,
+  CreatePage,
+  EditPage,
+  Layout,
+} from "./components/Pages";
 
 type Bindings = CloudflareBindings & {
   ADMIN_USERNAME?: string;
@@ -21,7 +26,7 @@ app.get("/", (c) => c.redirect("/dashboard"));
 app.use("/dashboard*", async (c, next) => {
   const auth = basicAuth({
     username: c.env.ADMIN_USERNAME || "admin",
-    password: c.env.ADMIN_PASSWORD || "admin",
+    password: c.env.ADMIN_PASSWORD || "admin123",
   });
   return auth(c, next);
 });
@@ -48,22 +53,37 @@ app.get("/dashboard", async (c) => {
     }
 
     // Sort by creation date descending (newest first)
-    links.sort((a, b) => new Date(b.metadata.createdAt).getTime() - new Date(a.metadata.createdAt).getTime());
+    links.sort(
+      (a, b) =>
+        new Date(b.metadata.createdAt).getTime() -
+        new Date(a.metadata.createdAt).getTime(),
+    );
 
     const url = new URL(c.req.url);
     const hostUrl = `${url.protocol}//${url.host}`;
     const successMessage = c.req.query("success") || undefined;
 
-    return c.html(<DashboardPage links={links} hostUrl={hostUrl} successMessage={successMessage} />);
+    return c.html(
+      <DashboardPage
+        links={links}
+        hostUrl={hostUrl}
+        successMessage={successMessage}
+      />,
+    );
   } catch (error) {
     console.error("Error fetching links from KV:", error);
     return c.html(
       <Layout title="Error" activeTab="links">
         <div className="card" style={{ padding: "40px", textAlign: "center" }}>
-          <h2 style={{ color: "var(--accent-danger)", marginBottom: "12px" }}>Failed to Load Dashboard</h2>
-          <p style={{ color: "var(--text-secondary)" }}>There was an error connecting to Cloudflare KV. Make sure your local KV storage bindings are correctly initialized.</p>
+          <h2 style={{ color: "var(--accent-danger)", marginBottom: "12px" }}>
+            Failed to Load Dashboard
+          </h2>
+          <p style={{ color: "var(--text-secondary)" }}>
+            There was an error connecting to Cloudflare KV. Make sure your local
+            KV storage bindings are correctly initialized.
+          </p>
         </div>
-      </Layout>
+      </Layout>,
     );
   }
 });
@@ -86,13 +106,23 @@ app.post("/dashboard/create", async (c) => {
   const hostUrl = `${url.protocol}//${url.host}`;
 
   if (!originalUrl) {
-    return c.html(<CreatePage hostUrl={hostUrl} errorMessage="Destination URL is required." />);
+    return c.html(
+      <CreatePage
+        hostUrl={hostUrl}
+        errorMessage="Destination URL is required."
+      />,
+    );
   }
 
   try {
     new URL(originalUrl);
   } catch {
-    return c.html(<CreatePage hostUrl={hostUrl} errorMessage="Invalid destination URL format (must include protocol, e.g. https://)." />);
+    return c.html(
+      <CreatePage
+        hostUrl={hostUrl}
+        errorMessage="Invalid destination URL format (must include protocol, e.g. https://)."
+      />,
+    );
   }
 
   try {
@@ -100,12 +130,26 @@ app.post("/dashboard/create", async (c) => {
       // Validate custom short code format
       const codeRegex = /^[a-zA-Z0-9-_]+$/;
       if (!codeRegex.test(code)) {
-        return c.html(<CreatePage hostUrl={hostUrl} errorMessage="Short code can only contain letters, numbers, dashes, and underscores." />);
+        return c.html(
+          <CreatePage
+            hostUrl={hostUrl}
+            errorMessage="Short code can only contain letters, numbers, dashes, and underscores."
+          />,
+        );
       }
 
       const exists = await c.env.KV.get(code);
       if (exists) {
-        return c.html(<CreatePage hostUrl={hostUrl} errorMessage={"The short code \"/" + code + "\" is already in use. Please select a different one."} />);
+        return c.html(
+          <CreatePage
+            hostUrl={hostUrl}
+            errorMessage={
+              'The short code "/' +
+              code +
+              '" is already in use. Please select a different one.'
+            }
+          />,
+        );
       }
     } else {
       // Auto-generate unique short code
@@ -113,13 +157,19 @@ app.post("/dashboard/create", async (c) => {
       const MAX_RETRIES = 5;
       let exists: string | null = null;
       do {
-        const urlToHash = counter === 0 ? originalUrl : `${originalUrl}-${counter}`;
+        const urlToHash =
+          counter === 0 ? originalUrl : `${originalUrl}-${counter}`;
         code = await getShortCode(urlToHash);
         exists = await c.env.KV.get(code);
         if (exists) {
           counter++;
           if (counter > MAX_RETRIES) {
-            return c.html(<CreatePage hostUrl={hostUrl} errorMessage="Failed to generate a unique short code. Please enter a custom one." />);
+            return c.html(
+              <CreatePage
+                hostUrl={hostUrl}
+                errorMessage="Failed to generate a unique short code. Please enter a custom one."
+              />,
+            );
           }
         }
       } while (exists);
@@ -135,10 +185,17 @@ app.post("/dashboard/create", async (c) => {
 
     await c.env.KV.put(code, originalUrl, { metadata });
 
-    return c.redirect(`/dashboard?success=Short+link+/${code}+created+successfully!`);
+    return c.redirect(
+      `/dashboard?success=Short+link+/${code}+created+successfully!`,
+    );
   } catch (error) {
     console.error("Error creating short link:", error);
-    return c.html(<CreatePage hostUrl={hostUrl} errorMessage="An internal error occurred while saving the link." />);
+    return c.html(
+      <CreatePage
+        hostUrl={hostUrl}
+        errorMessage="An internal error occurred while saving the link."
+      />,
+    );
   }
 });
 
@@ -198,13 +255,25 @@ app.post("/dashboard/edit/:code", async (c) => {
     };
 
     if (!originalUrl) {
-      return c.html(<EditPage link={shortLink} hostUrl={hostUrl} errorMessage="Destination URL is required." />);
+      return c.html(
+        <EditPage
+          link={shortLink}
+          hostUrl={hostUrl}
+          errorMessage="Destination URL is required."
+        />,
+      );
     }
 
     try {
       new URL(originalUrl);
     } catch {
-      return c.html(<EditPage link={shortLink} hostUrl={hostUrl} errorMessage="Invalid destination URL format (must include protocol, e.g. https://)." />);
+      return c.html(
+        <EditPage
+          link={shortLink}
+          hostUrl={hostUrl}
+          errorMessage="Invalid destination URL format (must include protocol, e.g. https://)."
+        />,
+      );
     }
 
     // Save changes by replacing originalUrl value and updating metadata
@@ -263,7 +332,8 @@ app.post("/api/shorten", async (c) => {
     const MAX_RETRIES = 5;
 
     do {
-      const urlToHash = counter === 0 ? originalUrl : `${originalUrl}-${counter}`;
+      const urlToHash =
+        counter === 0 ? originalUrl : `${originalUrl}-${counter}`;
       shortCode = await getShortCode(urlToHash);
       exists = await c.env.KV.get(shortCode);
 
@@ -302,13 +372,29 @@ app.get("/:code", async (c) => {
     if (!linkData.value) {
       return c.html(
         <Layout title="404 - Not Found" activeTab="links">
-          <div className="card" style={{ padding: "80px 24px", textAlign: "center" }}>
-            <h1 style={{ fontFamily: "Outfit", fontSize: "36px", color: "var(--accent-danger)", marginBottom: "16px" }}>404 - Link Not Found</h1>
-            <p style={{ color: "var(--text-secondary)", marginBottom: "32px" }}>The short link "/{code}" does not exist or has been deleted.</p>
-            <a href="/dashboard" className="btn btn-primary">Go to Dashboard</a>
+          <div
+            className="card"
+            style={{ padding: "80px 24px", textAlign: "center" }}
+          >
+            <h1
+              style={{
+                fontFamily: "Outfit",
+                fontSize: "36px",
+                color: "var(--accent-danger)",
+                marginBottom: "16px",
+              }}
+            >
+              404 - Link Not Found
+            </h1>
+            <p style={{ color: "var(--text-secondary)", marginBottom: "32px" }}>
+              The short link "/{code}" does not exist or has been deleted.
+            </p>
+            <a href="/dashboard" className="btn btn-primary">
+              Go to Dashboard
+            </a>
           </div>
         </Layout>,
-        404
+        404,
       );
     }
 
@@ -320,9 +406,7 @@ app.get("/:code", async (c) => {
     };
     metadata.clicks = (metadata.clicks || 0) + 1;
 
-    c.executionCtx.waitUntil(
-      c.env.KV.put(code, linkData.value, { metadata })
-    );
+    c.executionCtx.waitUntil(c.env.KV.put(code, linkData.value, { metadata }));
 
     return c.redirect(linkData.value);
   } catch (error) {
